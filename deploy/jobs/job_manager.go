@@ -40,6 +40,32 @@ func RunJobs(do *def.Packages) error {
 		return fmt.Errorf("error validating Burrow package file at %s: %v", do.YAMLPath, err)
 	}
 
+	// First compile everything
+	for _, job := range do.Package.Jobs {
+		payload, err := job.Payload()
+		if err != nil {
+			return fmt.Errorf("could not get Job payload: %v", payload)
+		}
+		err = util.PreProcessFields(payload, do)
+		if err != nil {
+			return err
+		}
+		// Revalidate with possible replacements
+		err = payload.Validate()
+		if err != nil {
+			return fmt.Errorf("error validating job %s after pre-processing variables: %v", job.Name, err)
+		}
+		switch payload.(type) {
+		case *def.Build:
+			announce(job.Name, "Build")
+			job.Result, err = BuildJob(job.Build, do)
+		case *def.Deploy:
+			announce(job.Name, "Deploy")
+			job.Result, err = CompileDeployJob(job.Deploy, do)
+		}
+	}
+
+	// Then do the rest
 	for _, job := range do.Package.Jobs {
 		payload, err := job.Payload()
 		if err != nil {
@@ -93,8 +119,9 @@ func RunJobs(do *def.Packages) error {
 			announce(job.Name, "Call")
 			job.Result, job.Variables, err = CallJob(job.Call, do)
 		case *def.Build:
-			announce(job.Name, "Build")
-			job.Result, err = BuildJob(job.Build, do)
+			// done
+			announce(job.Name, "Skipping completed Build job")
+			job.Result = ""
 
 		// State jobs
 		case *def.RestoreState:

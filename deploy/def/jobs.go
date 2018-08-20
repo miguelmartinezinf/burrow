@@ -3,6 +3,8 @@ package def
 import (
 	"regexp"
 
+	compilers "github.com/hyperledger/burrow/deploy/compile"
+
 	"github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
 	"github.com/hyperledger/burrow/deploy/def/rule"
@@ -265,6 +267,8 @@ type Deploy struct {
 	Sequence string `mapstructure:"sequence" json:"sequence" yaml:"sequence" toml:"sequence"`
 	// (Optional) todo
 	Variables []*abi.Variable
+	// Store result from compilation, to not deserialize
+	CompilerResponse *compilers.Response `mapstructure:"-" json:"-" yaml:"-" toml:"-"`
 }
 
 func (job *Deploy) Validate() error {
